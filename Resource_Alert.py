@@ -5,10 +5,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 
-# Configuration
-threshold_disk = 10  # Disk usage percentage threshold
-threshold_memory = 50  # Memory usage percentage threshold
-threshold_cpu = 80  # CPU usage percentage threshold
+# Threshold Configuration
+threshold_disk = 90  # Disk usage percentage threshold
+threshold_memory = 90  # Memory usage percentage threshold
+threshold_cpu = 100  # CPU usage percentage threshold
 
 # Email Config
 email_sender = 'babafarooq001@gmail.com'

@@ -5,21 +5,18 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 
-# Threshold Configuration
-threshold_disk = 90  # Disk usage percentage threshold
-threshold_memory = 90  # Memory usage percentage threshold
-threshold_cpu = 100  # CPU usage percentage threshold
-
-# Email Config
+# Configuration
+threshold_disk = 10  # Disk usage percentage threshold
+threshold_memory = 50  # Memory usage percentage threshold
+threshold_cpu = 80  # CPU usage percentage threshold
 email_sender = 'babafarooq001@gmail.com'
-email_receivers = ['babathaher786@gmail.com', 'babafarooq9154@gmail.com', ]  # List of email addresses
-email_subject = 'System Resource Alert for babafarooq-s1'
+email_receivers = ['babathaher786@gmail.com', 'babafarooq9154@gmail.com']  # List of email addresses
+email_subject = 'System Resource Alert for babafarooq-s1'  # List of System addresses
 smtp_server = 'smtp.gmail.com'
 smtp_port = 587
 smtp_username = 'babafarooq001@gmail.com'
 smtp_password = 'glor fuby gbus rcal'  # Replace with a secure method to load the password
 logo_path = '/home/logo.png'
-
 
 def get_disk_usage():
     """Return the disk usage percentage of the root filesystem."""

@@ -7,12 +7,12 @@ from email.mime.image import MIMEImage
 
 # Threshold Configuration
 threshold_disk = 10  # Disk usage percentage threshold
-threshold_memory = 50  # Memory usage percentage threshold
-threshold_cpu = 80  # CPU usage percentage threshold
+threshold_memory = 10  # Memory usage percentage threshold
+threshold_cpu = 10  # CPU usage percentage threshold
 
 # SMTP Configuration
 email_sender = 'babafarooq001@gmail.com'
-email_receivers = ['babathaher786@gmail.com', 'babafarooq9154@gmail.com']  # List of email addresses
+email_receivers = ['babathaher786@gmail.com', 'babafarooq9154@gmail.com', 'royalgreen3367@gmail.com' ]  # List of email addresses
 email_subject = 'System Resource Alert for babafarooq-s1'  # List of System addresses
 smtp_server = 'smtp.gmail.com'
 smtp_port = 587

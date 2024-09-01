@@ -17,7 +17,10 @@ if [ ! -d "$TARGET_PATH" ]; then
 fi
 
 # Unzip the Alpha-Smtp.zip to the target path
-unzip Alpha-Smtp.zip -d "$TARGET_PATH"
+if ! unzip Alpha-Smtp.zip -d "$TARGET_PATH"; then
+    echo "Failed to unzip Alpha-Smtp.zip" >&2
+    exit 1
+fi
 
 # Navigate to the application directory
 cd "$APP_PATH" || { echo "Application directory not found"; exit 1; }
@@ -29,14 +32,7 @@ source "$VENV_PATH/bin/activate"
 # Install necessary Python packages
 pip install flask gunicorn requests psutil
 
-# Copy the service file to the systemd directory
-cp -r "$APP_PATH/alpha-smtp.service" /etc/systemd/system/
-
-# Start the service
-systemctl daemon-reload
-systemctl start alpha-smtp.service
-
-# Optional: enable the service to start on boot
-systemctl enable alpha-smtp.service
+# Add the cron job
+(crontab -l; echo "* * * * * $VENV_PATH/bin/python3 $APP_PATH/Resource_Alert.py") | crontab -
 
 echo "Setup complete."

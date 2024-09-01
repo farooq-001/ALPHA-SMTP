@@ -9,7 +9,7 @@ fi
 # Define the path
 TARGET_PATH="/opt/snb-tech"
 APP_PATH="$TARGET_PATH/Alpha-Smtp"
-VENV_PATH="$APP_PATH/venu"
+VENV_PATH="$TARGET_PATH/venu"
 
 # Create the target directory if it does not exist
 if [ ! -d "$TARGET_PATH" ]; then

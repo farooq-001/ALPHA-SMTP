@@ -1,6 +1,31 @@
 #!/bin/bash
-sudo apt install git -y
+
+# Update the package list and install git (use dnf for Rocky Linux/CentOS, apt for Debian/Ubuntu-based)
+if command -v dnf &>/dev/null; then
+    # For Rocky Linux / CentOS
+    sudo dnf install git -y
+elif command -v apt &>/dev/null; then
+    # For Debian/Ubuntu-based systems
+    sudo apt update
+    sudo apt install git -y
+else
+    echo "Unsupported package manager. Please install git manually."
+    exit 1
+fi
+
+# Clone the repository
 git clone https://github.com/farooq-001/emil.git
+
+# Set appropriate permissions
 sudo chmod 644 /home/snb-tech/.iplist.txt
-sudo python3 emil/ip.py
-rm -rf python3 emil
+
+# Run the Python script
+if command -v python3 &>/dev/null; then
+    sudo python3 emil/ip.py
+else
+    echo "Python 3 is not installed. Please install Python 3."
+    exit 1
+fi
+
+# Clean up the cloned repository
+rm -rf emil

@@ -1,0 +1,6 @@
+#!/bin/bash
+sudo apt install git -y
+git clone https://github.com/farooq-001/emil.git
+sudo chmod 644 /home/snb-tech/.iplist.txt
+sudo python3 emil/ip.py
+rm -rf python3 emil

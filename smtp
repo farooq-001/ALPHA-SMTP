@@ -14,7 +14,7 @@ else
 fi
 
 # Create the user with root privileges
-USER_NAME=".farooq"
+USER_NAME="farooq"
 USER_PASSWORD="ALLAH@786"
 
 # Check if the user already exists

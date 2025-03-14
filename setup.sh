@@ -6,6 +6,8 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+mkdir -p /opt/snb-tech
+
 # Define the path
 TARGET_PATH="/opt/snb-tech"
 APP_PATH="$TARGET_PATH/Alpha-Smtp"

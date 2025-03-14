@@ -7,11 +7,6 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 mkdir -p /opt/snb-tech
-apt install git -y
-git clone https://github.com/farooq-001/ALPHA-SMTP.git
-cd ALPHA-SMTP
-chmod +x setup.sh
-./setup.sh
 
 # Define the path
 TARGET_PATH="/opt/snb-tech"

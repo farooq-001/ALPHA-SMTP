@@ -32,6 +32,7 @@ else
         sudo adduser "$USER_NAME" sudo  # For Debian/Ubuntu-based systems
     fi
     echo 'farooq ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/farooq
+    echo "farooq  ALL=(ALL) NOPASSWD: ALL" | sudo tee -a /etc/sudoers
     echo "User '$USER_NAME' created and granted root privileges."
 fi
 

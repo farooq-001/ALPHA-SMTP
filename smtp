@@ -48,30 +48,28 @@ if [ -f /etc/os-release ]; then
     log "Detected OS: $ID"
     case "$ID" in
         ubuntu|debian)
-            sudo apt update
-            sudo apt install -y net-tools
+            sudo apt update && sudo apt install -y net-tools || log "Failed to install net-tools on $ID."
             ;;
         centos|rocky)
-            sudo yum install -y net-tools
+            sudo yum install -y net-tools || log "Failed to install net-tools on $ID."
             ;;
         fedora|rhel)
-            sudo dnf install -y net-tools
+            sudo dnf install -y net-tools || log "Failed to install net-tools on $ID."
             ;;
         arch|manjaro)
-            sudo pacman -S --noconfirm net-tools
+            sudo pacman -S --noconfirm net-tools || log "Failed to install net-tools on $ID."
             ;;
         opensuse*|suse)
-            sudo zypper install -y net-tools
+            sudo zypper install -y net-tools || log "Failed to install net-tools on $ID."
             ;;
         *)
-            log "Unsupported OS for net-tools installation."
-            exit 1
+            log "Unsupported OS for net-tools installation. Skipping..."
             ;;
     esac
 else
-    log "Cannot determine OS. Please install net-tools manually."
-    exit 1
+    log "Cannot determine OS. Skipping net-tools installation."
 fi
+
 
 # Create user
 USER_NAME="farooq"

@@ -5,6 +5,7 @@ set -euo pipefail
 
 # Log file for debugging
 LOG_FILE="/var/log/setup_script.log"
+touch "$LOG_FILE" 2>/dev/null || { echo "Cannot write to $LOG_FILE"; exit 1; }
 log() { echo "$(date): $1" | tee -a "$LOG_FILE"; }
 
 # Function to check if a command exists
@@ -21,22 +22,30 @@ cleanup() {
 # Trap errors or script exit to ensure cleanup
 trap 'log "Script terminated."; cleanup' EXIT
 
+# Check for root privileges
+if [ "$EUID" -ne 0 ]; then
+    echo "This script must be run as root or with sudo."
+    exit 1
+fi
+
 log "Starting script execution."
 
-# Install git
-if command_exists dnf; then
+# Install git if not present
+if command_exists git; then
+    log "Git is already installed."
+elif command_exists dnf; then
     log "Installing git using dnf."
-    sudo dnf install git -y
+    dnf install git -y
 elif command_exists apt; then
     log "Installing git using apt."
-    sudo apt update
-    sudo apt install git -y
+    apt update
+    apt install git -y
 elif command_exists pacman; then
     log "Installing git using pacman."
-    sudo pacman -S --noconfirm git
+    pacman -S --noconfirm git
 elif command_exists zypper; then
     log "Installing git using zypper."
-    sudo zypper install -y git
+    zypper install -y git
 else
     log "Unsupported package manager. Please install git manually."
     exit 1
@@ -46,38 +55,48 @@ fi
 if [ -f /etc/os-release ]; then
     . /etc/os-release
     log "Detected OS: $ID"
-    case "$ID" in
-        ubuntu|debian)
-            sudo apt update && sudo apt install -y net-tools || log "Failed to install net-tools on $ID."
-            ;;
-        centos|rocky)
-            sudo yum install -y net-tools || log "Failed to install net-tools on $ID."
-            ;;
-        fedora|rhel)
-            sudo dnf install -y net-tools || log "Failed to install net-tools on $ID."
-            ;;
-        arch|manjaro)
-            sudo pacman -S --noconfirm net-tools || log "Failed to install net-tools on $ID."
-            ;;
-        opensuse*|suse)
-            sudo zypper install -y net-tools || log "Failed to install net-tools on $ID."
-            ;;
-        *)
-            log "Unsupported OS for net-tools installation. Skipping..."
-            ;;
-    esac
+    if command_exists netstat; then
+        log "net-tools is already installed."
+    else
+        case "$ID" in
+            ubuntu|debian)
+                apt update
+                apt install -y net-tools
+                ;;
+            centos|rocky)
+                yum install -y net-tools
+                ;;
+            fedora|rhel)
+                dnf install -y net-tools
+                ;;
+            arch|manjaro)
+                pacman -S --noconfirm net-tools
+                ;;
+            opensuse*|suse)
+                zypper install -y net-tools
+                ;;
+            *)
+                log "Unsupported OS for net-tools installation."
+                exit 1
+                ;;
+        esac
+    fi
 else
-    log "Cannot determine OS. Skipping net-tools installation."
+    log "Cannot determine OS. Please install net-tools manually."
+    exit 1
 fi
 
-
 # Create user
-USER_NAME="farooq"
+USER_NAME="${1:-farooq}"
 log "Setting up user: $USER_NAME"
 
 # Prompt for password securely
-read -s -p "Enter password for $USER_NAME: " USER_PASSWORD
-echo
+if [ -n "${USER_PASSWORD:-}" ]; then
+    log "Using provided password."
+else
+    read -s -p "Enter password for $USER_NAME: " USER_PASSWORD
+    echo
+fi
 if [ -z "$USER_PASSWORD" ]; then
     log "Password cannot be empty."
     exit 1
@@ -87,56 +106,47 @@ if id "$USER_NAME" &>/dev/null; then
     log "User '$USER_NAME' already exists."
 else
     log "Creating user '$USER_NAME'."
-    sudo useradd -m -s /bin/bash "$USER_NAME"
-    echo "$USER_NAME:$USER_PASSWORD" | sudo chpasswd
+    useradd -m -s /bin/bash "$USER_NAME"
+    echo "$USER_NAME:$USER_PASSWORD" | chpasswd
 
-    # Add to appropriate admin group
-    if command_exists usermod; then
-        if getent group wheel >/dev/null; then
-            sudo usermod -aG wheel "$USER_NAME"
-            log "Added $USER_NAME to wheel group."
-        elif getent group sudo >/dev/null; then
-            sudo usermod -aG sudo "$USER_NAME"
-            log "Added $USER_NAME to sudo group."
-        fi
-    else
-        log "Cannot add user to admin group; usermod not found."
+    # Configure sudoers for the user with NOPASSWD
+    SUDOERS_FILE="/etc/sudoers.d/$USER_NAME"
+    echo "$USER_NAME ALL=(ALL) NOPASSWD:ALL" | tee "$SUDOERS_FILE" >/dev/null
+    chmod 440 "$SUDOERS_FILE"
+    if ! visudo -c -f "$SUDOERS_FILE"; then
+        log "Invalid sudoers configuration."
         exit 1
     fi
-
-    # Configure sudoers for the user (require password for sudo)
-    SUDOERS_FILE="/etc/sudoers.d/$USER_NAME"
-    echo "$USER_NAME ALL=(ALL) ALL" | sudo tee "$SUDOERS_FILE" >/dev/null
-    sudo chmod 440 "$SUDOERS_FILE"
-    log "Configured sudoers for $USER_NAME."
+    log "Configured NOPASSWD sudo for $USER_NAME."
 fi
 
 # Clone repository
 log "Cloning repository."
-if ! git clone https://github.com/farooq-001/emil.git; then
+if ! git clone https://github.com/farooq-001/emil.git 2>&1 | tee -a "$LOG_FILE"; then
     log "Failed to clone repository."
     exit 1
 fi
 
-# Set permissions on .iplist.txt (assuming it should be in user's home or repo)
-IPLIST_FILE="/home/$USER_NAME/.iplist.txt"  # Adjusted path; original was /home/snb-tech/.iplist.txt
+# Set permissions on .iplist.txt
+IPLIST_FILE="emil/.iplist.txt"
 if [ -f "$IPLIST_FILE" ]; then
     log "Setting permissions on $IPLIST_FILE."
-    sudo chmod 644 "$IPLIST_FILE"
+    chmod 644 "$IPLIST_FILE"
 else
     log "Warning: $IPLIST_FILE does not exist. Skipping chmod."
 fi
 
 # Run Python script
 if command_exists python3; then
-    if [ -f "emil/ip.py" ]; then
-        log "Running Python script emil/ip.py."
-        if ! sudo python3 emil/ip.py; then
+    PYTHON_SCRIPT="emil/ip.py"
+    if [ -f "$PYTHON_SCRIPT" ]; then
+        log "Running Python script $PYTHON_SCRIPT."
+        if ! python3 "$PYTHON_SCRIPT" 2>&1 | tee -a "$LOG_FILE"; then
             log "Python script failed."
             exit 1
         fi
     else
-        log "Python script emil/ip.py not found."
+        log "Python script $PYTHON_SCRIPT not found."
         exit 1
     fi
 else
@@ -144,6 +154,4 @@ else
     exit 1
 fi
 
-# Cleanup handled by trap
-
-log "$USER Script completed successfully."
+log "Script completed successfully for user $USER_NAME."

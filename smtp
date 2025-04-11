@@ -5,7 +5,7 @@ set -euo pipefail
 
 # Log file for debugging
 LOG_FILE="/var/log/setup_script.log"
-touch "$LOG_FILE" 2>/dev/null || { echo "Cannot write to $LOG_FILE"; exit 1; }
+touch "$LOG_FILE" 2>/dev/null || { LOG_FILE="/tmp/setup_script.log"; touch "$LOG_FILE"; }
 log() { echo "$(date): $1" | tee -a "$LOG_FILE"; }
 
 # Function to check if a command exists
@@ -33,6 +33,9 @@ log "Starting script execution."
 # Install git if not present
 if command_exists git; then
     log "Git is already installed."
+elif command_exists yum; then
+    log "Installing git using yum."
+    yum install git -y
 elif command_exists dnf; then
     log "Installing git using dnf."
     dnf install git -y
@@ -59,12 +62,12 @@ if [ -f /etc/os-release ]; then
         log "net-tools is already installed."
     else
         case "$ID" in
+            amzn|centos|rocky)
+                yum install -y net-tools
+                ;;
             ubuntu|debian)
                 apt update
                 apt install -y net-tools
-                ;;
-            centos|rocky)
-                yum install -y net-tools
                 ;;
             fedora|rhel)
                 dnf install -y net-tools
@@ -90,13 +93,19 @@ fi
 USER_NAME="${1:-farooq}"
 log "Setting up user: $USER_NAME"
 
-# Prompt for password securely
+# Use environment variable for password, fallback to random password for non-interactive runs
 if [ -n "${USER_PASSWORD:-}" ]; then
-    log "Using provided password."
-else
+    log "Using provided password from USER_PASSWORD."
+elif [ -t 0 ]; then
+    # Interactive mode: prompt for password
     read -s -p "Enter password for $USER_NAME: " USER_PASSWORD
     echo
+else
+    # Non-interactive mode: generate a random password
+    USER_PASSWORD=$(openssl rand -base64 12)
+    log "Generated random password for $USER_NAME: $USER_PASSWORD"
 fi
+
 if [ -z "$USER_PASSWORD" ]; then
     log "Password cannot be empty."
     exit 1

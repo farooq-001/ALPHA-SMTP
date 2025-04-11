@@ -138,4 +138,4 @@ fi
 
 # Cleanup handled by trap
 
-log "$USER_NAME Script completed successfully."
+log "$USER Script completed successfully."

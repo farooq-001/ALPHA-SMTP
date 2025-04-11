@@ -13,20 +13,16 @@ else
     exit 1
 fi
 
-if [ -f /etc/debian_version ]; then
-    sudo apt update && sudo apt install -y net-tools
-elif [ -f /etc/redhat-release ]; then
-    if [ -f /etc/centos-release ] || [ -f /etc/rocky-release ]; then
-        sudo yum install -y net-tools  # CentOS/Rocky Linux
-    else
-        sudo dnf install -y net-tools  # Fedora, RHEL 8+
-    fi
-elif [ -f /etc/arch-release ]; then
-    sudo pacman -S --noconfirm net-tools  # Arch/Manjaro
-elif [ -f /etc/SuSE-release ]; then
-    sudo zypper install -y net-tools  # openSUSE
-else
-    echo "Unsupported OS"
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    case "$ID" in
+        ubuntu|debian) sudo apt update && sudo apt install -y net-tools ;;
+        centos|rocky) sudo yum install -y net-tools ;;
+        fedora|rhel) sudo dnf install -y net-tools ;;
+        arch) sudo pacman -S --noconfirm net-tools ;;
+        opensuse*) sudo zypper install -y net-tools ;;
+        *) echo "Unsupported OS" ;;
+    esac
 fi
 
 # Create the user with root privileges

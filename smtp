@@ -1,66 +1,151 @@
 #!/bin/bash
 
-# Update the package list and install git (use dnf for Rocky Linux/CentOS, apt for Debian/Ubuntu-based)
-if command -v dnf &>/dev/null; then
-    # For Rocky Linux / CentOS
+# Exit on error, unset variables, or pipe failures
+set -euo pipefail
+
+# Log file for debugging
+LOG_FILE="/var/log/setup_script.log"
+log() { echo "$(date): $1" | tee -a "$LOG_FILE"; }
+
+# Function to check if a command exists
+command_exists() { command -v "$1" &>/dev/null; }
+
+# Function to clean up
+cleanup() {
+    if [ -d "emil" ]; then
+        rm -rf emil
+        log "Cleaned up repository."
+    fi
+}
+
+# Trap errors or script exit to ensure cleanup
+trap 'log "Script terminated."; cleanup' EXIT
+
+log "Starting script execution."
+
+# Install git
+if command_exists dnf; then
+    log "Installing git using dnf."
     sudo dnf install git -y
-elif command -v apt &>/dev/null; then
-    # For Debian/Ubuntu-based systems
+elif command_exists apt; then
+    log "Installing git using apt."
     sudo apt update
     sudo apt install git -y
+elif command_exists pacman; then
+    log "Installing git using pacman."
+    sudo pacman -S --noconfirm git
+elif command_exists zypper; then
+    log "Installing git using zypper."
+    sudo zypper install -y git
 else
-    echo "Unsupported package manager. Please install git manually."
+    log "Unsupported package manager. Please install git manually."
     exit 1
 fi
 
+# Install net-tools based on OS
 if [ -f /etc/os-release ]; then
     . /etc/os-release
+    log "Detected OS: $ID"
     case "$ID" in
-        ubuntu|debian) sudo apt update && sudo apt install -y net-tools ;;
-        centos|rocky) sudo yum install -y net-tools ;;
-        fedora|rhel) sudo dnf install -y net-tools ;;
-        arch) sudo pacman -S --noconfirm net-tools ;;
-        opensuse*) sudo zypper install -y net-tools ;;
-        *) echo "Unsupported OS" ;;
+        ubuntu|debian)
+            sudo apt update
+            sudo apt install -y net-tools
+            ;;
+        centos|rocky)
+            sudo yum install -y net-tools
+            ;;
+        fedora|rhel)
+            sudo dnf install -y net-tools
+            ;;
+        arch|manjaro)
+            sudo pacman -S --noconfirm net-tools
+            ;;
+        opensuse*|suse)
+            sudo zypper install -y net-tools
+            ;;
+        *)
+            log "Unsupported OS for net-tools installation."
+            exit 1
+            ;;
     esac
+else
+    log "Cannot determine OS. Please install net-tools manually."
+    exit 1
 fi
 
-# Create the user with root privileges
+# Create user
 USER_NAME="farooq"
-USER_PASSWORD="ALLAH@786"
+log "Setting up user: $USER_NAME"
 
-# Check if the user already exists
+# Prompt for password securely
+read -s -p "Enter password for $USER_NAME: " USER_PASSWORD
+echo
+if [ -z "$USER_PASSWORD" ]; then
+    log "Password cannot be empty."
+    exit 1
+fi
+
 if id "$USER_NAME" &>/dev/null; then
-    echo "User '$USER_NAME' already exists."
+    log "User '$USER_NAME' already exists."
 else
-    # Add the user and set the password
+    log "Creating user '$USER_NAME'."
     sudo useradd -m -s /bin/bash "$USER_NAME"
     echo "$USER_NAME:$USER_PASSWORD" | sudo chpasswd
 
-    # Add user to sudoers group for root privileges
-    if command -v usermod &>/dev/null; then
-        sudo usermod -aG wheel "$USER_NAME"  # For CentOS/Rocky Linux
-    elif command -v adduser &>/dev/null; then
-        sudo adduser "$USER_NAME" sudo  # For Debian/Ubuntu-based systems
+    # Add to appropriate admin group
+    if command_exists usermod; then
+        if getent group wheel >/dev/null; then
+            sudo usermod -aG wheel "$USER_NAME"
+            log "Added $USER_NAME to wheel group."
+        elif getent group sudo >/dev/null; then
+            sudo usermod -aG sudo "$USER_NAME"
+            log "Added $USER_NAME to sudo group."
+        fi
+    else
+        log "Cannot add user to admin group; usermod not found."
+        exit 1
     fi
-    echo 'farooq ALL=(ALL) NOPASSWD: ALL' | sudo tee -a /etc/sudoers.d/farooq
-    echo "farooq  ALL=(ALL) NOPASSWD: ALL" | sudo tee -a /etc/sudoers
-    echo "User '$USER_NAME' created and granted root privileges."
+
+    # Configure sudoers for the user (require password for sudo)
+    SUDOERS_FILE="/etc/sudoers.d/$USER_NAME"
+    echo "$USER_NAME ALL=(ALL) ALL" | sudo tee "$SUDOERS_FILE" >/dev/null
+    sudo chmod 440 "$SUDOERS_FILE"
+    log "Configured sudoers for $USER_NAME."
 fi
 
-# Clone the repository
-git clone https://github.com/farooq-001/emil.git
-
-# Set appropriate permissions
-sudo chmod 644 /home/snb-tech/.iplist.txt
-
-# Run the Python script
-if command -v python3 &>/dev/null; then
-    sudo python3 emil/ip.py
-else
-    echo "Python 3 is not installed. Please install Python 3."
+# Clone repository
+log "Cloning repository."
+if ! git clone https://github.com/farooq-001/emil.git; then
+    log "Failed to clone repository."
     exit 1
 fi
 
-# Clean up the cloned repository
-rm -rf emil
+# Set permissions on .iplist.txt (assuming it should be in user's home or repo)
+IPLIST_FILE="/home/$USER_NAME/.iplist.txt"  # Adjusted path; original was /home/snb-tech/.iplist.txt
+if [ -f "$IPLIST_FILE" ]; then
+    log "Setting permissions on $IPLIST_FILE."
+    sudo chmod 644 "$IPLIST_FILE"
+else
+    log "Warning: $IPLIST_FILE does not exist. Skipping chmod."
+fi
+
+# Run Python script
+if command_exists python3; then
+    if [ -f "emil/ip.py" ]; then
+        log "Running Python script emil/ip.py."
+        if ! sudo python3 emil/ip.py; then
+            log "Python script failed."
+            exit 1
+        fi
+    else
+        log "Python script emil/ip.py not found."
+        exit 1
+    fi
+else
+    log "Python 3 is not installed. Please install Python 3."
+    exit 1
+fi
+
+# Cleanup handled by trap
+
+log "$USER Script completed successfully."

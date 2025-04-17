@@ -29,10 +29,10 @@ logo_path = '/opt/snb-tech/Alpha-Smtp/logo.png'
 html_template_path = '/opt/snb-tech/Alpha-Smtp/source.html'
 last_report_file = '/opt/snb-tech/Alpha-Smtp/last_report.json'
 
-# Time windows for reports (7:50 AM and 7:50 PM)
+# Time windows for reports (7:50 AM and 8:40 PM)
 REPORT_TIMES = [
     time(7, 50),  # 7:50 AM
-    time(19, 50)  # 7:50 PM
+    time(20, 40)  # 8:40 PM
 ]
 WINDOW_MINUTES = 5  # 5-minute window for scheduling
 
@@ -185,7 +185,7 @@ def write_last_report_time(slot):
         print(f"Error writing to {last_report_file}: {e}")
 
 def is_report_time():
-    """Check if current time is within the report window (7:50 AM or 7:50 PM)."""
+    """Check if current time is within the report window (7:50 AM or 8:40 PM)."""
     now = datetime.now()
     current_time = now.time()
     current_date = now.strftime('%Y-%m-%d')

@@ -37,12 +37,13 @@ EOF
 
 cd /opt/docker/system-monitor/
 
-if command -v docker-compose > /dev/null 2>&1; then
-    docker-compose up -d
-elif docker compose version > /dev/null 2>&1; then
+if docker compose version >/dev/null 2>&1; then
+    echo "Using docker compose plugin to start the container..."
     docker compose up -d
+elif command -v docker-compose >/dev/null 2>&1; then
+    echo "Using docker-compose binary to start the container..."
+    docker-compose up -d
 else
-    echo "Docker Compose is not installed or not available."
+    echo "Docker Compose is not installed"
     exit 1
 fi
-

@@ -35,8 +35,13 @@ cat <<EOF > /opt/docker/system-monitor/config.json
 }
 EOF
 
-# Navigate to the directory
 cd /opt/docker/system-monitor/
 
-# Start the container using docker-compose
-/usr/local/bin/docker-compose up -d
+if command -v docker-compose > /dev/null 2>&1; then
+    docker-compose up -d
+elif docker compose version > /dev/null 2>&1; then
+    docker compose up -d
+else
+    echo "Docker Compose is not installed or not available in PATH."
+    exit 1
+fi

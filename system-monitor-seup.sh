@@ -42,6 +42,7 @@ if command -v docker-compose > /dev/null 2>&1; then
 elif docker compose version > /dev/null 2>&1; then
     docker compose up -d
 else
-    echo "Docker Compose is not installed or not available in PATH."
+    echo "Docker Compose is not installed or not available."
     exit 1
 fi
+

@@ -10,7 +10,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: baba001/system-monitor-smtp:v1
+    image: baba001/system-monitor-smtp:v2
     container_name: system-monitor-container
     volumes:
       - ./config.json:/opt/smtp/config.json:ro
